@@ -56,14 +56,12 @@ systems and data-pipeline design.
 - Solo-maintained, low budget: one Postgres database, embeddings provider behind an interface with a
   deterministic fake for tests so CI costs nothing
 - API keys live in `.env` only; `.env.example` documents the names
-- Docker is not installed locally yet; integration tests need a Postgres with pgvector somehow
+- Integration tests run against a real pgvector Postgres via Docker + testcontainers
 
 ## Open questions
 
 - **Embedding provider:** Voyage AI (Anthropic's recommended partner) vs. OpenAI vs. a local
   sentence-transformers model (free, offline, slower). Interface first; pick when building it.
-- **Test Postgres:** install Docker (testcontainers) vs. a native local Postgres + pgvector vs. a free
-  Neon branch for CI.
 - **Chunking strategy** for v1: fixed token windows with overlap vs. structure-aware (Markdown headings,
   code symbols). Content-defined boundaries help incremental updates; worth an experiment.
 - **Library vs. service:** v1 is a library + CLI. Whether to add a long-running worker/HTTP API is a v2 call.

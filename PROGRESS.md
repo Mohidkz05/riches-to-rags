@@ -55,14 +55,12 @@
 
 Slice 1 complete (see Done). Next up: slice 2.
 
-**Open blocker for integration tests:** Docker Desktop is installed on Windows but WSL integration is
-off, so `docker` fails inside WSL. Fix: Docker Desktop → Settings → Resources → WSL Integration →
-enable the distro → Apply & Restart; check with `docker run --rm hello-world`.
+Docker works inside WSL (2026-11-24), so testcontainers integration tests are unblocked.
+Repo is public: https://github.com/Mohidkz05/riches-to-rags
 
 ## Next
 
-1. Enable Docker WSL integration (above).
-2. Build v1 in thin vertical slices:
+1. Build v1 in thin vertical slices:
    1. ~~Source interface + local-directory source + change detection~~ (done 2026-11-24)
    2. Chunking + chunk hashing + fake embedder + pgvector storage + `sync` / `status` / `search`
    3. Idempotent/resumable sync with fault-injection tests
@@ -71,5 +69,5 @@ enable the distro → Apply & Restart; check with `docker run --rm hello-world`.
    6. Eval set + recall@k / MRR + eval-gated cutover
    7. Git-repo source; real embedding provider
    8. Benchmarks + recorded demo + README polish
-3. Open questions to settle along the way (see `SPEC.md`): embedding provider, chunking strategy,
+2. Open questions to settle along the way (see `SPEC.md`): embedding provider, chunking strategy,
    whether to add a worker/HTTP service in v2.
