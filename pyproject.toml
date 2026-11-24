@@ -1,0 +1,49 @@
+[project]
+name = "riches-to-rags"
+version = "0.1.0"
+description = "Incremental, crash-safe sync engine for pgvector indexes, with eval-gated embedding-model migrations."
+readme = "README.md"
+authors = [
+    { name = "Mohidkz05", email = "170862291+Mohidkz05@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "pgvector>=0.5.1",
+    "psycopg[binary]>=3.3.9",
+    "typer>=0.29.2",
+]
+
+[project.scripts]
+riches-to-rags = "riches_to_rags.cli:main"
+r2r = "riches_to_rags.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.414",
+    "pytest>=9.2.0",
+    "ruff>=0.17.6",
+    "testcontainers>=4.15.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["integration: needs a real Postgres (Docker via testcontainers)"]
