@@ -26,6 +26,18 @@
   ecosystem and build speed.
 - 2026-11-24: CLI exposed as both `riches-to-rags` and the short alias `r2r` (nicer in demos).
   Version is single-sourced from package metadata.
+- 2026-11-24: **A listing is complete or it fails.** A document missing from `list_documents()` is
+  diffed as deleted, so unreadable dirs/files raise `SourceReadError` instead of being skipped
+  (otherwise a transient EACCES or flaky mount would wipe part of the index). `skipped` is only for
+  files that can never be text (binary, non-UTF-8, too large, symlink, unsafe name), which *should* be
+  removed from the index. Workaround for a permanently unreadable file: exclude it.
+- 2026-11-24: **Local source reads go through directory file descriptors** (`os.fwalk`, `dir_fd`,
+  `O_NOFOLLOW`, `O_NONBLOCK`, checks on `fstat` of the open fd, bounded read). Security review showed
+  check-then-open-by-path let a writer inside root swap a file or directory for a symlink and get
+  files outside root read, or hang the sync on a FIFO. Cost: POSIX only (fine: Linux/macOS/WSL).
+- 2026-11-24: Fingerprint is SHA-256 of bytes (not mtime). Possible later optimisation: skip hashing
+  when (size, mtime) is unchanged since last sync. CRLF vs LF changes the hash (bytes did change);
+  revisit if Windows checkouts cause churn.
 
 ## Done
 
@@ -34,10 +46,14 @@
 - 2026-11-24: Bootstrapped skeleton: `uv init --package`, deps added, Typer app (`src/riches_to_rags/cli.py`)
   with a `version` command, smoke tests (`tests/test_cli.py`), Ruff/Pyright/pytest config in
   `pyproject.toml`, `.gitignore`, `README.md`. `tack detect --write` → status active; `tack verify` green.
+- 2026-11-24: **Slice 1 done:** `Source` protocol + `SourceReadError`, `LocalDirectorySource`
+  (fd-based, symlink/FIFO/race-safe), pure `diff()` → `ChangeSet`, `r2r scan`. 51 tests incl.
+  hypothesis properties for diff and deterministic race tests. Passed reviewer + security-reviewer
+  (two rounds; all findings fixed).
 
 ## Current work
 
-Bootstrap complete. Ready for the first v1 slice.
+Slice 1 complete (see Done). Next up: slice 2.
 
 **Open blocker for integration tests:** Docker Desktop is installed on Windows but WSL integration is
 off, so `docker` fails inside WSL. Fix: Docker Desktop → Settings → Resources → WSL Integration →
@@ -47,7 +63,7 @@ enable the distro → Apply & Restart; check with `docker run --rm hello-world`.
 
 1. Enable Docker WSL integration (above).
 2. Build v1 in thin vertical slices:
-   1. Source interface + local-directory source + change detection (added/modified/deleted)
+   1. ~~Source interface + local-directory source + change detection~~ (done 2026-11-24)
    2. Chunking + chunk hashing + fake embedder + pgvector storage + `sync` / `status` / `search`
    3. Idempotent/resumable sync with fault-injection tests
    4. Embedding cache
