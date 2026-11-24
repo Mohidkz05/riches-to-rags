@@ -53,7 +53,44 @@
 
 ## Current work
 
-Slice 1 complete (see Done). Next up: slice 2.
+Slice 1 complete (see Done). **Slice 2 planned 2026-11-24, not yet approved or started.** User paused
+here to continue in a new chat: re-present this plan, get a "yes", then start Stage A.
+
+**Slice 2 plan: chunking + fake embedder + pgvector storage + `init` / `sync` / `status` / `search`.**
+Goal demo: `r2r init --source ./docs`, `r2r sync`, `r2r status`, `r2r search "..."`; edit one file,
+re-sync, and only that file's changed chunks are re-embedded.
+
+Approach (with reasons):
+- Chunking: split on paragraph breaks (blank lines), pack into ~1,000-char chunks, no overlap. Chunks
+  are exact spans of the source text. Fixed windows would shift every later boundary on an insert and
+  force re-embedding everything after it; paragraph boundaries are stable.
+- Chunk identity = hash of chunk text. On modify, reuse embeddings for chunk hashes the document
+  already had; embed only new text (cross-document cache is slice 4).
+- `FakeEmbedder`: deterministic feature hashing of tokens, L2-normalised, so keyword-style search works
+  with no API key. Real provider in slice 7.
+- One DB transaction per document (delete old chunks + insert new + upsert fingerprint), so a crash
+  leaves each doc fully old or fully new and re-running converges. Slice 3 proves it with fault injection.
+- Plain SQL in numbered migration files applied by `init`; cosine search via pgvector HNSW index.
+- Index meta stores source root + embedder name + vector dim; sync refuses a mismatch (pointing at a
+  different folder would otherwise diff as "everything deleted").
+
+Stages (each ends with `tack verify` green):
+- A (no DB): `chunking.py` (chunks with ordinal + hash), `embedding.py` (`Embedder` protocol, `FakeEmbedder`).
+- B: `migrations/001_init.sql` (index_meta, documents, chunks with vector + HNSW), `store.py` (psycopg,
+  plain SQL), `sync.py` (list → diff → per changed doc: chunk, reuse, embed, write in one tx → report of
+  docs added/modified/deleted and chunks embedded vs reused).
+- C: CLI `init`/`sync`/`status`/`search` (DB URL from `R2R_DATABASE_URL` or `--db`; add `.env.example`),
+  `.github/workflows/ci.yml` running `tack verify` (+ README badge), README quickstart + "how it works".
+
+Proof: hypothesis tests for chunker (chunks rejoin to the exact text, none empty, editing one paragraph
+only changes nearby chunks); fake embedder determinism/dim/unit norm; integration tests on a real
+pgvector container via testcontainers (session-scoped, image `pgvector/pgvector`): first sync indexes
+all, no-op re-sync embeds nothing, one-paragraph edit re-embeds only changed chunks, delete removes all
+chunks, search finds the expected doc. Manual: run the CLI on `src/`.
+
+Risks: first test run pulls the pgvector image (~150 MB); chunk size/rules are guesses (configurable;
+slice 6 eval will judge); vector dim fixed per index (model changes are slice 5 migrations).
+No new dependencies needed.
 
 Docker works inside WSL (2026-11-24), so testcontainers integration tests are unblocked.
 Repo is public: https://github.com/Mohidkz05/riches-to-rags
